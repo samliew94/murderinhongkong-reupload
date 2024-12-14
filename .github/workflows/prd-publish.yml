@@ -41,7 +41,7 @@ jobs:
                 script: |
 
                     # Server Logins to GHCR (GHCR_PAT already contains enough privilege to read package from GHCR)
-                    echo "${{ secrets.GHCR_PAT }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+                    echo "${{ secrets.GHCR_PAT }}" | sudo -S docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
                     # Server pulls the GHCR Image
                     sudo docker pull ghcr.io/${{ github.repository_owner }}/mihk:latest
