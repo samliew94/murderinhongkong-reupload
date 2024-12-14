@@ -1,0 +1,63 @@
+name: Docker Image CI for GHCR
+
+on:
+    push:
+        branches:
+            - release
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        permissions:
+            packages: write
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build and Push to GHCR
+              run: |
+                # Login to GHCR
+                echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+                # Build Image
+                docker build . -t ghcr.io/${{ github.repository_owner }}/mihk:latest
+
+                # Push Image to GHCR
+                docker push ghcr.io/${{ github.repository_owner }}/mihk:latest
+
+    ssh-and-deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+            - name: SSH Into Server and Run Container
+              uses: appleboy/ssh-action@v1.2.0
+              with:                
+                host: ${{ secrets.SSH_HOST }}
+                username: ${{ secrets.SSH_USERNAME }}
+                key: ${{ secrets.SSH_KEY }}
+                passphrase: ${{ secrets.SSH_PASSPHRASE }}
+                port: 22
+                script: |
+
+                    # Server Logins to GHCR (GHCR_PAT already contains enough privilege to read package from GHCR)
+                    echo "${{ secrets.GHCR_PAT }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+                    # Server pulls the GHCR Image
+                    sudo docker pull ghcr.io/${{ github.repository_owner }}/mihk:latest
+
+                    sudo docker rm -f mihk-1 mihk-2 mihk-3
+
+                    # Server uses the image template to create and run the container
+                    sudo docker run -d \
+                        --name mihk-1 \
+                        -p 8080:8080 \                        
+                        ghcr.io/${{ github.repository_owner }}/mihk:latest
+
+                    sudo docker run -d \
+                        --name mihk-2 \
+                        -p 8081:8080 \                        
+                        ghcr.io/${{ github.repository_owner }}/mihk:latest
+
+                    sudo docker run -d \
+                        --name mihk-3 \
+                        -p 8082:8080 \                        
+                        ghcr.io/${{ github.repository_owner }}/mihk:latest
