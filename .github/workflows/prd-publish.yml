@@ -8,6 +8,7 @@ on:
 jobs:
     build-and-push:
         runs-on: ubuntu-latest
+        environment: prd
         permissions:
             packages: write
             contents: read
@@ -27,6 +28,7 @@ jobs:
     ssh-and-deploy:
         needs: build-and-push
         runs-on: ubuntu-latest
+        environment: prd
         steps:
             - name: SSH Into Server and Run Container
               uses: appleboy/ssh-action@v1.2.0
